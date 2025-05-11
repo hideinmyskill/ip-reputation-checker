@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "IP Reputation Checker",
+    "version": "1.0",
+    "description": "Check IP reputation using VirusTotal, AbuseIPDB, and Spur.us",
+    "permissions": ["storage"],
+    "host_permissions": [
+      "https://www.virustotal.com/*",
+      "https://api.abuseipdb.com/*",
+      "https://ipqualityscore.com/*"
+    ],
+    "action": {
+      "default_popup": "index.html",
+      "default_title": "IP Reputation Checker"
+    },
+    "icons": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  }
+  
