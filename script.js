@@ -17,9 +17,8 @@ async function checkIPs() {
     const abuseRes = await getAbuseDB(ip);
     resultBox.innerHTML += createResultHTML("AbuseIPDB", "https://www.abuseipdb.com/favicon.ico", abuseRes);
 
-    const ipqsRes = await getIPQualityScore(ip);
-    resultBox.innerHTML += createResultHTML("IPQualityScore", "https://www.ipqualityscore.com/templates/frontend/img/logo_light.svg", ipqsRes);
-
+    const proxyRes = await getProxyCheck(ip);
+    resultBox.innerHTML += createResultHTML("ProxyCheck.io", "https://proxycheck.io/favicon.ico", proxyRes);
 
     resultsContainer.appendChild(resultBox);
   }
@@ -34,34 +33,40 @@ function createResultHTML(name, iconUrl, result) {
       <div style="margin-left: 28px; font-size: 13px; color: #ccc;">${result.extraInfo || ""}</div>`;
   }
   
-
-// function createResultHTML(name, iconUrl, result) {
-//   return `
-//     <div class="source">
-//       <img src="${iconUrl}" alt="${name}"> 
-//       <span>${name}: <span class="${result.statusClass}">${result.text}</span></span>
-//     </div>`;
-// }
-
 async function getVirusTotal(ip) {
     try {
       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
-        headers: { "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38" }
+        headers: {
+          "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38"
+        }
       });
+  
       const data = await res.json();
       const attributes = data.data.attributes;
+  
       const malicious = attributes.last_analysis_stats.malicious;
       const isp = attributes.as_owner || "Unknown";
       const country = attributes.country || "N/A";
       const flag = country ? `https://flagsapi.com/${country}/flat/24.png` : "";
-      const date = attributes.last_analysis_date 
-        ? new Date(attributes.last_analysis_date * 1000).toLocaleString() 
+      const date = attributes.last_analysis_date
+        ? new Date(attributes.last_analysis_date * 1000).toLocaleString()
         : "N/A";
+  
+      const tags = attributes.tags || [];
+      const tagList = tags.length > 0 ? tags.map(t => `<li>${t}</li>`).join("") : "<li>None</li>";
   
       return {
         text: malicious > 0 ? `${malicious} engines flagged this IP` : "Clean",
         statusClass: malicious > 0 ? "status-bad" : "status-good",
-        extraInfo: `<strong>Country:</strong> ${country} <img src="${flag}" alt="${country}"><br><strong>ISP:</strong> ${isp}<br><strong>Last Analysis:</strong> ${date}<br>`
+        extraInfo: `
+          <strong>Country:</strong> ${country} <img src="${flag}" alt="${country}"><br>
+          <strong>ISP:</strong> ${isp}<br>
+          <strong>Last Analysis:</strong> ${date}<br>
+          <strong>Tags:</strong>
+          <ul style="margin-left: 1rem; padding-left: 0.5rem; font-size: 12px;">
+            ${tagList}
+          </ul>
+        `
       };
     } catch {
       return {
@@ -72,22 +77,35 @@ async function getVirusTotal(ip) {
     }
   }
   
-
+  
 // async function getVirusTotal(ip) {
-//   try {
-//     const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
-//       headers: { "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38" }
-//     });
-//     const data = await res.json();
-//     const malicious = data.data.attributes.last_analysis_stats.malicious;
-//     return {
-//       text: malicious > 0 ? `${malicious} engines flagged this IP` : "Clean",
-//       statusClass: malicious > 0 ? "status-bad" : "status-good"
-//     };
-//   } catch {
-//     return { text: "Error fetching", statusClass: "status-bad" };
+//     try {
+//       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
+//         headers: { "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38" }
+//       });
+//       const data = await res.json();
+//       const attributes = data.data.attributes;
+//       const malicious = attributes.last_analysis_stats.malicious;
+//       const isp = attributes.as_owner || "Unknown";
+//       const country = attributes.country || "N/A";
+//       const flag = country ? `https://flagsapi.com/${country}/flat/24.png` : "";
+//       const date = attributes.last_analysis_date 
+//         ? new Date(attributes.last_analysis_date * 1000).toLocaleString() 
+//         : "N/A";
+  
+//       return {
+//         text: malicious > 0 ? `${malicious} engines flagged this IP` : "Clean",
+//         statusClass: malicious > 0 ? "status-bad" : "status-good",
+//         extraInfo: `<strong>Country:</strong> ${country} <img src="${flag}" alt="${country}"><br><strong>ISP:</strong> ${isp}<br><strong>Last Analysis:</strong> ${date}<br>`
+//       };
+//     } catch {
+//       return {
+//         text: "Error fetching",
+//         statusClass: "status-bad",
+//         extraInfo: "No additional data"
+//       };
+//     }
 //   }
-// }
 
 async function getAbuseDB(ip) {
   try {
@@ -107,34 +125,56 @@ async function getAbuseDB(ip) {
     return { text: "Error fetching", statusClass: "status-bad" };
   }
 }
-
-
-function getIPQualityScore(ip) {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: "getIPQualityScore", ip },
-        (response) => {
-          if (response && response.success) {
-            const data = response.data;
-            resolve({
-              text: data.fraud_score > 75 ? `High Risk: ${data.fraud_score}/100` : `Risk Score: ${data.fraud_score}/100`,
-              statusClass: data.fraud_score > 75 ? "status-bad" : "status-good",
-              extraInfo: `VPN: ${data.vpn ? "Yes" : "No"}<br>
-                          Proxy: ${data.proxy ? "Yes" : "No"}<br>
-                          TOR: ${data.tor ? "Yes" : "No"}<br>
-                          Bot: ${data.bot_status ? "Yes" : "No"}<br>
-                          ISP: ${data.ISP || "Unknown"}<br>
-                          Country: ${data.country_code || "N/A"} <img src="https://flagsapi.com/${data.country_code}/flat/24.png" alt="flag">`
-            });
-          } else {
-            resolve({
-              text: "Error fetching",
-              statusClass: "status-bad",
-              extraInfo: "No additional data"
-            });
-          }
-        }
-      );
-    });
-  }
   
+function getProxyCheck(ip) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: "proxyCheck", ip }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.success) {
+        console.error("ProxyCheck Error:", chrome.runtime.lastError || response?.error || "No response");
+        resolve({
+          text: "Error fetching",
+          statusClass: "status-bad",
+          extraInfo: "Unable to retrieve ProxyCheck data"
+        });
+        return;
+      }
+
+      const res = response.data[ip];
+      if (!res) {
+        resolve({
+          text: "No data returned",
+          statusClass: "status-bad",
+          extraInfo: "Invalid IP or response format"
+        });
+        return;
+      }
+
+      const proxyDetected = res.proxy === "yes";
+      const vpnType = res.type || "Unknown";
+      const provider = res.provider || "N/A";
+      const operator = res.operator || {};
+      const operatorName = operator.name || "Unknown";
+      const operatorUrl = operator.url || "#";
+      const anonymity = operator.anonymity || "N/A";
+      const popularity = operator.popularity || "N/A";
+      const protocols = operator.protocols ? operator.protocols.join(", ") : "N/A";
+
+      const policies = operator.policies || {};
+      const policyHTML = Object.entries(policies)
+        .map(([key, value]) => `<li><strong>${key.replace(/_/g, " ")}:</strong> ${value}</li>`)
+        .join("");
+
+      resolve({
+        text: proxyDetected ? `Proxy detected (${vpnType})` : "No Proxy",
+        statusClass: proxyDetected ? "status-bad" : "status-good",
+        extraInfo: `
+          <strong>Provider:</strong> ${provider}<br>
+          <strong>Operator:</strong> ${operatorName}<br>
+          <strong>Anonymity:</strong> ${anonymity}<br>
+          <strong>Popularity:</strong> ${popularity}<br>
+          <strong>Protocols:</strong> ${protocols}<br>
+        `
+      });
+    });
+  });
+}

@@ -1,15 +1,11 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "getIPQualityScore") {
-      const ip = request.ip;
-      const apiKey = "ieoKLDoxKZwJjc7j01oe2zfDQo6JRZd7"; // Replace with your real API key
-      const url = `https://ipqualityscore.com/api/json/ip/${apiKey}/${ip}`;
-  
-      fetch(url)
-        .then(res => res.json())
-        .then(data => sendResponse({ success: true, data }))
-        .catch(error => sendResponse({ success: false, error: error.message }));
-  
-      return true; // Required for async response
+chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+    if (req.action === "proxyCheck") {
+      fetch(`https://proxycheck.io/v2/${req.ip}?key=public-oh7416-26yxkt-064508&vpn=1`)
+        .then(r => r.json())
+        .then(d => sendResponse({ success: true, data: d }))
+        .catch(e => sendResponse({ success: false, error: e.message }));
+      return true;
     }
   });
   
+  console.log("im working")

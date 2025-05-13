@@ -7,11 +7,14 @@
     "host_permissions": [
       "https://www.virustotal.com/*",
       "https://api.abuseipdb.com/*",
-      "https://ipqualityscore.com/*"
+      "https://proxycheck.io/*"
     ],
     "action": {
       "default_popup": "index.html",
       "default_title": "IP Reputation Checker"
+    },
+    "background": {
+    "service_worker": "background.js"
     },
     "icons": {
       "16": "icon.png",
