@@ -37,7 +37,7 @@ async function getVirusTotal(ip) {
     try {
       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
         headers: {
-          "x-apikey": "7dac5564f35df3bc9d6ae5bca3205612c8e4f59f76a62188e2293de31aa17f24"
+          "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38"
         }
       });
   
@@ -111,7 +111,7 @@ async function getAbuseDB(ip) {
   try {
     const res = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}`, {
       headers: {
-        "Key": "34be141c145e33e2b96236db598a5c466f1129cb3c2446d8d4a383b744ebe7a7eb49c4e2728e7df1",
+        "Key": "ae3d1bab448972cb7bbb1640b0ebe0310fe6b73904e7d7435963c985f9f27877dfc8779f71f272be",
         "Accept": "application/json"
       }
     });
