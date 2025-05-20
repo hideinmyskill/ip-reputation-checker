@@ -11,7 +11,21 @@
     <h1>IP Reputation Checker</h1>
     <textarea id="ipInput" rows="4" placeholder="Enter IP addresses separated by new lines..."></textarea>
     <button id="checkBtn">Check Reputation</button>
+    <button id="clearBtn" style="margin-top: 10px; background-color: #ff6666;">Clear Results</button>
     <div class="results" id="results"></div>
+    <table id="resultsTable" class="results-table">
+    <thead>
+      <tr>
+        <th>IP Address</th>
+        <th><img src="/icons/VTicon.png" alt="VirusTotal" width="16"> VirusTotal</th>
+        <th><img src="https://www.abuseipdb.com/favicon.ico" alt="AbuseDB" width="16"> AbuseDB</th>
+        <th><img src="https://proxycheck.io/favicon.ico" alt="ProxyCheck" width="16"> ProxyCheck</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody">
+      <!-- Results here -->
+    </tbody>
+</table>
   </div>
   <script src="script.js"></script>
 </body>

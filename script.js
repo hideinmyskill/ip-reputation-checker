@@ -3,41 +3,54 @@ document.getElementById("checkBtn").addEventListener("click", checkIPs);
 async function checkIPs() {
   const input = document.getElementById("ipInput").value.trim();
   const ips = input.split(/\s+/);
-  const resultsContainer = document.getElementById("results");
-  resultsContainer.innerHTML = "";
+  const resultsBody = document.getElementById("resultsBody");
+
+  // Clear previous results from display and storage
+  resultsBody.innerHTML = "";
+  chrome.storage.local.remove("savedResults");
+
+  let storedRows = [];
 
   for (const ip of ips) {
-    const resultBox = document.createElement("div");
-    resultBox.className = "result-box";
-    resultBox.innerHTML = `<div class="ip-header">Checking IP: ${ip}</div>`;
-
     const vtRes = await getVirusTotal(ip);
-    resultBox.innerHTML += createResultHTML("VirusTotal", "/icons/VTicon.png", vtRes);
-
     const abuseRes = await getAbuseDB(ip);
-    resultBox.innerHTML += createResultHTML("AbuseIPDB", "https://www.abuseipdb.com/favicon.ico", abuseRes);
-
     const proxyRes = await getProxyCheck(ip);
-    resultBox.innerHTML += createResultHTML("ProxyCheck.io", "https://proxycheck.io/favicon.ico", proxyRes);
 
-    resultsContainer.appendChild(resultBox);
+    const rowHTML = `
+      <tr>
+        <td><strong>${ip}</strong></td>
+        <td>${formatCell(vtRes)}</td>
+        <td>${formatCell(abuseRes)}</td>
+        <td>${formatCell(proxyRes)}</td>
+      </tr>
+    `;
+
+    storedRows.push(rowHTML);
+    resultsBody.insertAdjacentHTML("beforeend", rowHTML);
   }
+
+  chrome.storage.local.set({ savedResults: storedRows });
+
+  // Clear input after search
+  document.getElementById("ipInput").value = "";
 }
 
-function createResultHTML(name, iconUrl, result) {
-    return `
-      <div class="source">
-        <img src="${iconUrl}" alt="${name}"> 
-        <span>${name}: <span class="${result.statusClass}">${result.text}</span></span>
-      </div>
-      <div style="margin-left: 28px; font-size: 13px; color: #ccc;">${result.extraInfo || ""}</div>`;
-  }
-  
+function formatCell(result) {
+  return `
+    <div style="color: ${result.statusClass === 'status-bad' ? '#ffaaaa' : '#aaffaa'}; font-size: 10px;">
+      ${result.text}<br>
+      <span style="font-size: 10px; color: #ccc;">${result.extraInfo || ""}</span>
+    </div>
+  `;
+}
+
 async function getVirusTotal(ip) {
     try {
+      const config = await fetch('./config.json').then(res => res.json());
+
       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
         headers: {
-          "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38"
+          "x-apikey": config.VT_API_KEY
         }
       });
   
@@ -56,16 +69,13 @@ async function getVirusTotal(ip) {
       const tagList = tags.length > 0 ? tags.map(t => `<li>${t}</li>`).join("") : "<li>None</li>";
   
       return {
-        text: malicious > 0 ? `${malicious} engines flagged this IP` : "Clean",
+        text: malicious > 0 ? `Status: ${malicious} engines flagged this IP` : "Status: Clean",
         statusClass: malicious > 0 ? "status-bad" : "status-good",
         extraInfo: `
-          <strong>Country:</strong> ${country} <img src="${flag}" alt="${country}"><br>
+          <img src="${flag}" alt="${country}" style="width: 30px; height: auto; display: block; margin: 0 auto;">
+          <strong>Country:</strong> ${country}<br>
           <strong>ISP:</strong> ${isp}<br>
           <strong>Last Analysis:</strong> ${date}<br>
-          <strong>Tags:</strong>
-          <ul style="margin-left: 1rem; padding-left: 0.5rem; font-size: 12px;">
-            ${tagList}
-          </ul>
         `
       };
     } catch {
@@ -76,50 +86,27 @@ async function getVirusTotal(ip) {
       };
     }
   }
-  
-  
-// async function getVirusTotal(ip) {
-//     try {
-//       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
-//         headers: { "x-apikey": "36598ab5e55fbb431ae562cc6018d94460587bdc49fdb7ada622ca072f917b38" }
-//       });
-//       const data = await res.json();
-//       const attributes = data.data.attributes;
-//       const malicious = attributes.last_analysis_stats.malicious;
-//       const isp = attributes.as_owner || "Unknown";
-//       const country = attributes.country || "N/A";
-//       const flag = country ? `https://flagsapi.com/${country}/flat/24.png` : "";
-//       const date = attributes.last_analysis_date 
-//         ? new Date(attributes.last_analysis_date * 1000).toLocaleString() 
-//         : "N/A";
-  
-//       return {
-//         text: malicious > 0 ? `${malicious} engines flagged this IP` : "Clean",
-//         statusClass: malicious > 0 ? "status-bad" : "status-good",
-//         extraInfo: `<strong>Country:</strong> ${country} <img src="${flag}" alt="${country}"><br><strong>ISP:</strong> ${isp}<br><strong>Last Analysis:</strong> ${date}<br>`
-//       };
-//     } catch {
-//       return {
-//         text: "Error fetching",
-//         statusClass: "status-bad",
-//         extraInfo: "No additional data"
-//       };
-//     }
-//   }
 
 async function getAbuseDB(ip) {
   try {
+    const config1 = await fetch('./config.json').then(res => res.json());
     const res = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}`, {
       headers: {
-        "Key": "ae3d1bab448972cb7bbb1640b0ebe0310fe6b73904e7d7435963c985f9f27877dfc8779f71f272be",
+        "Key": config1.AbuseDB_API_KEY,
         "Accept": "application/json"
       }
     });
     const data = await res.json();
     const score = data.data.abuseConfidenceScore;
+    const domain = data.data.domain;
+    const usageType = data.data.usageType;
+    console.log("abuseDB:", data)
     return {
       text: `Abuse Score: ${score}/100`,
-      statusClass: score > 50 ? "status-bad" : "status-good"
+      statusClass: score > 50 ? "status-bad" : "status-good",
+      extraInfo: `
+        <strong>Domain:</strong> ${domain}<br>
+        <strong>Usage:</strong> ${usageType}`
     };
   } catch {
     return { text: "Error fetching", statusClass: "status-bad" };
@@ -149,6 +136,7 @@ function getProxyCheck(ip) {
         return;
       }
 
+      console.log(res)
       const proxyDetected = res.proxy === "yes";
       const vpnType = res.type || "Unknown";
       const provider = res.provider || "N/A";
@@ -178,3 +166,20 @@ function getProxyCheck(ip) {
     });
   });
 }
+
+// add stored rows to popup
+document.addEventListener("DOMContentLoaded", () => {
+  const resultsBody = document.getElementById("resultsBody");
+
+  chrome.storage.local.get("savedResults", (data) => {
+    if (data.savedResults && Array.isArray(data.savedResults)) {
+      resultsBody.innerHTML = data.savedResults.join("");
+    }
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    chrome.storage.local.remove("savedResults", () => {
+      resultsBody.innerHTML = "";
+    });
+  });
+});
