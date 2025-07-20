@@ -47,7 +47,6 @@ function formatCell(result) {
 async function getVirusTotal(ip) {
     try {
       const config = await fetch('./config.json').then(res => res.json());
-
       const res = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
         headers: {
           "x-apikey": config.VT_API_KEY
@@ -73,7 +72,7 @@ async function getVirusTotal(ip) {
         statusClass: malicious > 0 ? "status-bad" : "status-good",
         extraInfo: `
           <img src="${flag}" alt="${country}" style="width: 30px; height: auto; display: block; margin: 0 auto;">
-          <strong>Country:</strong> ${country}<br>
+          <strong>Country Code:</strong> ${country}<br>
           <strong>ISP:</strong> ${isp}<br>
           <strong>Last Analysis:</strong> ${date}<br>
         `
@@ -100,11 +99,13 @@ async function getAbuseDB(ip) {
     const score = data.data.abuseConfidenceScore;
     const domain = data.data.domain;
     const usageType = data.data.usageType;
+    const totalReports = data.data.totalReports
     console.log("abuseDB:", data)
     return {
       text: `Abuse Score: ${score}/100`,
       statusClass: score > 50 ? "status-bad" : "status-good",
       extraInfo: `
+        <strong>Total Reports:</strong>${totalReports}<br> 
         <strong>Domain:</strong> ${domain}<br>
         <strong>Usage:</strong> ${usageType}`
     };
@@ -142,6 +143,7 @@ function getProxyCheck(ip) {
       const provider = res.provider || "N/A";
       const operator = res.operator || {};
       const operatorName = operator.name || "Unknown";
+      const country = res.country || "N/A";
       const operatorUrl = operator.url || "#";
       const anonymity = operator.anonymity || "N/A";
       const popularity = operator.popularity || "N/A";
@@ -156,6 +158,7 @@ function getProxyCheck(ip) {
         text: proxyDetected ? `Proxy detected (${vpnType})` : "No Proxy",
         statusClass: proxyDetected ? "status-bad" : "status-good",
         extraInfo: `
+          <strong>Country: </strong> ${country}<br> 
           <strong>Provider:</strong> ${provider}<br>
           <strong>Operator:</strong> ${operatorName}<br>
           <strong>Anonymity:</strong> ${anonymity}<br>
